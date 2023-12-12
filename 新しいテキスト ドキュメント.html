@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>共有カレンダー</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .calendar { border-collapse: collapse; width: 100%; }
+        .calendar th, .calendar td {
+            border: 1px solid #ddd; text-align: center; padding: 8px;
+        }
+        .calendar th { background-color: #f2f2f2; }
+        .calendar td { height: 100px; }
+        .calendar .weekend { background-color: #f9f9f9; }
+        .calendar .today { background-color: #e2e2ff; }
+        .event {
+            background-color: #add8e6; color: #000; padding: 3px; margin: 3px;
+            display: inline-block;
+        }
+        .controls { text-align: center; margin: 20px 0; }
+        select { padding: 5px 10px; margin-right: 10px; }
+        .modal {
+            display: none; /* 最初は非表示に設定 */
+            position: fixed; z-index: 1; left: 0; top: 0;
+            width: 100%; height: 100%; overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe; margin: 15% auto; padding: 20px;
+            border: 1px solid #888; width: 80%;
+        }
+        .close {
+            color: #aaa; float: right; font-size: 28px; font-weight: bold;
+        }
+        .close:hover, .close:focus {
+            color: black; text-decoration: none; cursor: pointer;
+        }
+        .calendar .today {
+    background-color: #ffc0cb; /* ピンク色 */
+}
+
+    </style>
+</head>
+<body>
+    <h1>共有カレンダー</h1>
+
+<!-- モーダルウィンドウのHTML -->
+<div id="myModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>スケジュール設定</h2> <!-- ここにモーダルのタイトルを追加 -->
+        <input type="hidden" id="selectedDate" name="selectedDate">
+        <label for="startTime">開始時間:</label>
+        <input type="time" id="startTime" name="startTime"><br>
+
+        <label for="endTime">修正時間:</label>
+        <input type="time" id="endTime" name="endTime"><br>
+
+        <label for="comment">コメント:</label>
+        <textarea id="comment" name="comment"></textarea><br>
+
+        <button type="button" onclick="addEvent()">追加</button>
+    </div>
+</div>
+
+
+
+
+<div class="controls">
+    <label>月/年を選択:</label>
+    <select id="month-select"></select>
+    <select id="year-select"></select>
+    <button onclick="generateCalendar()">表示</button>
+    <button onclick="showToday()">今日</button> <!-- 今日ボタンを追加 -->
+</div>
+
+
+    <!-- カレンダービュー -->
+    <table class="calendar" id="calendar">
+        <tr>
+            <th>日</th>
+            <th>月</th>
+            <th>火</th>
+            <th>水</th>
+            <th>木</th>
+            <th>金</th>
+            <th>土</th>
+        </tr>
+        <!-- 日付セルはJavaScriptで動的に生成される -->
+    </table>
+
+    <script>
+
+
+// イベントデータを保存するための配列を取得または初期化
+var eventsArray = JSON.parse(localStorage.getItem('events')) || [];
+
+function addEvent() {
+    var startTime = document.getElementById('startTime').value;
+    var selectedDate = document.getElementById('selectedDate').value; // 選択された日付
+
+    // イベントオブジェクトを作成
+    var event = {
+        date: selectedDate,
+        startTime: startTime
+    };
+
+    // イベントを配列に追加
+    eventsArray.push(event);
+
+    // イベントをローカルストレージに保存
+    localStorage.setItem('events', JSON.stringify(eventsArray));
+
+    // モーダルを閉じる
+    document.getElementById('myModal').style.display = 'none';
+
+    // カレンダーにイベントを表示
+    displayEvents();
+}
+
+function displayEvents() {
+    // カレンダーの日付セルを取得
+    var cells = document.querySelectorAll('.calendar td');
+
+    // 既存のイベントをクリア
+    cells.forEach(cell => {
+        var eventDivs = cell.getElementsByClassName('event');
+        while(eventDivs.length > 0){
+            eventDivs[0].parentNode.removeChild(eventDivs[0]);
+        }
+    });
+
+    // セルにイベントを表示
+    eventsArray.forEach(function(event) {
+        var cell = document.querySelector('[data-date="' + event.date + '"]');
+        if (cell) {
+            var eventDiv = document.createElement('div');
+            eventDiv.classList.add('event');
+            eventDiv.textContent = event.startTime; // ここに開始時間を表示
+            cell.appendChild(eventDiv);
+        }
+    });
+}
+
+// カレンダーを生成する関数は省略
+
+// ウィンドウがロードされたときに実行
+window.onload = function() {
+    populateOptions();
+    generateCalendar();
+    displayEvents(); // ローカルストレージからイベントを読み込んで表示
+};
+
+
+
+
+
+        function populateOptions() {
+            const monthSelect = document.getElementById('month-select');
+            const yearSelect = document.getElementById('year-select');
+            const currentDate = new Date();
+            const currentMonth = currentDate.getMonth();
+            const currentYear = currentDate.getFullYear();
+
+            for (let i = 1; i <= 12; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `${i}月`;
+                monthSelect.appendChild(option);
+            }
+
+            for (let i = currentYear - 20; i <= currentYear + 20; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `${i}年`;
+                yearSelect.appendChild(option);
+            }
+
+            monthSelect.value = currentMonth + 1;
+            yearSelect.value = currentYear;
+        }
+
+        function generateCalendar() {
+            const month = document.getElementById('month-select').value;
+            const year = document.getElementById('year-select').value;
+            const calendar = document.getElementById('calendar');
+            const firstDay = new Date(year, month - 1, 1).getDay();
+            const lastDate = new Date(year, month, 0).getDate();
+
+            calendar.innerHTML = '<tr><th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th></tr>';
+
+            let date = 1;
+            for (let i = 0; i < 6; i++) {
+                let row = document.createElement('tr');
+
+                for (let j = 0; j < 7; j++) {
+                    let cell = document.createElement('td');
+                    if (i === 0 && j < firstDay) {
+                        cell.classList.add('empty');
+                    } else if (date > lastDate) {
+                        break;
+                    } else {
+                        cell.innerText = date;
+                        cell.onclick = function() { showModal(); };
+                        if (date === new Date().getDate() && year === new Date().getFullYear() && month === new Date().getMonth() + 1) {
+                            cell.classList.add('today');
+                        }
+                        date++;
+                    }
+                    row.appendChild(cell);
+                }
+                calendar.appendChild(row);
+            }
+        }
+
+        function showModal() {
+            var modal = document.getElementById("myModal");
+            modal.style.display = "block";
+        }
+
+        var span = document.getElementsByClassName("close")[0];
+        span.onclick = function() {
+            var modal = document.getElementById("myModal");
+            modal.style.display = "none";
+        }
+
+        window.onclick = function(event) {
+            var modal = document.getElementById("myModal");
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+
+        populateOptions();
+        generateCalendar();
+    </script>
+</body>
+</html>
